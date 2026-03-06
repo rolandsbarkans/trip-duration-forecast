@@ -1,5 +1,7 @@
 # NYC Taxi Trip Duration Prediction
 
+[![Live Site](https://img.shields.io/badge/Live%20Site-trip--duration--forecast.vercel.app-2A9C64?style=for-the-badge&logo=vercel&logoColor=white)](https://trip-duration.vercel.app)
+
 I built a model that predicts how long a Manhattan taxi trip will take, represented with a range, not just a single number. The idea is that a good ETA system should tell you "between 11 and 16 minutes" rather than just "14 minutes."
 
 ## What I did

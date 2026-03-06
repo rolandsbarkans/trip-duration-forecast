@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NYC Trip Duration Prediction — Rolands Barkans</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green:      #2A9C64;
+      --dark-green: #0C2C1C;
+      --accent:     #74EFAA;
+      --white:      #FFFFFF;
+      --off-white:  #F5FAF7;
+      --light-gray: #EDF2EF;
+      --mid-gray:   #8A9E94;
+      --text:       #0C2C1C;
+      --body-text:  #3D5A4A;
+      --font:       'Inter', sans-serif;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); background: var(--white); color: var(--text); overflow-x: hidden; }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 0 48px; height: 60px;
+      background: rgba(255,255,255,0.93); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--light-gray);
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 500; font-size: 13px; color: var(--mid-gray); letter-spacing: 0; }
+    .nav-logo-smile { font-size: 13px; }
+    .nav-dot { width: 28px; height: 28px; background: var(--green); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .nav-dot svg { width: 14px; height: 14px; fill: white; }
+    .nav-links { display: flex; gap: 32px; list-style: none; justify-content: center; }
+    .nav-links a { font-size: 13px; font-weight: 500; color: var(--mid-gray); text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--green); }
+    .nav-right { display: flex; justify-content: flex-end; }
+    .nav-github { font-size: 13px; font-weight: 600; color: var(--white); background: var(--dark-green); padding: 8px 18px; border-radius: 8px; text-decoration: none; transition: background 0.2s, transform 0.15s; }
+    .nav-github:hover { background: var(--green); transform: translateY(-1px); }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 120px 48px 80px; background: var(--off-white); position: relative; overflow: hidden;
+    }
+    .hero-bg-circle { position: absolute; border-radius: 50%; opacity: 0.07; background: var(--green); pointer-events: none; }
+    .hero-bg-circle.c1 { width: 600px; height: 600px; top: -150px; right: -150px; }
+    .hero-bg-circle.c2 { width: 300px; height: 300px; bottom: -80px; left: -80px; }
+    .hero h1 { font-size: clamp(36px, 6vw, 72px); font-weight: 800; line-height: 1.05; letter-spacing: -2px; color: var(--dark-green); max-width: 860px; margin-bottom: 24px; opacity: 0; animation: fadeUp 0.7s 0.2s forwards; }
+    .hero h1 span { color: var(--green); }
+    .hero p { font-size: 18px; font-weight: 400; color: var(--mid-gray); max-width: 560px; line-height: 1.65; margin-bottom: 48px; opacity: 0; animation: fadeUp 0.7s 0.35s forwards; }
+    .hero-metrics { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; opacity: 0; animation: fadeUp 0.7s 0.5s forwards; }
+
+    /* Hero metric flip chips */
+    .metric-chip { width: 160px; height: 96px; perspective: 600px; cursor: pointer; }
+    .metric-chip-inner { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.55s; }
+    .metric-chip:hover .metric-chip-inner { transform: rotateY(180deg); }
+    .chip-front, .chip-back {
+      position: absolute; inset: 0; border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 14px 16px; backface-visibility: hidden;
+    }
+    .chip-front { background: var(--white); border: 1.5px solid var(--light-gray); }
+    .chip-back { background: var(--dark-green); border: 1.5px solid var(--dark-green); transform: rotateY(180deg); }
+    .chip-front .val { font-size: 28px; font-weight: 800; color: var(--green); letter-spacing: -1px; display: flex; align-items: baseline; gap: 5px; }
+    .chip-front .val small { font-size: 13px; font-weight: 600; color: var(--green); }
+    .chip-front .label { font-size: 11px; font-weight: 500; color: var(--mid-gray); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 5px; text-align: center; }
+    .chip-back .back-text { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.82); text-align: center; line-height: 1.55; }
+
+    /* ROAD */
+    .road-wrapper { width: 100%; overflow: hidden; height: 64px; position: relative; background: var(--white); border-top: 1px solid var(--light-gray); border-bottom: 1px solid var(--light-gray); }
+    .road-line { position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: repeating-linear-gradient(to right, var(--light-gray) 0px, var(--light-gray) 30px, transparent 30px, transparent 60px); }
+    .car { position: absolute; top: 50%; transform: translateY(-50%); animation: drive 6s linear infinite; }
+    .car svg { width: 56px; height: 28px; }
+    @keyframes drive { from { left: -80px; } to { left: calc(100% + 80px); } }
+
+    /* STEPS */
+    .steps-wrapper { background: var(--off-white); padding: 100px 0; }
+    .steps-inner { max-width: 1100px; margin: 0 auto; padding: 0 48px; }
+    .steps-header { text-align: center; margin-bottom: 72px; }
+    .steps-grid { display: flex; flex-direction: column; position: relative; }
+    .steps-grid::before { content: ''; position: absolute; left: 35px; top: 0; bottom: 0; width: 2px; background: linear-gradient(to bottom, var(--accent), var(--green), var(--dark-green)); border-radius: 2px; }
+    .step { display: grid; grid-template-columns: 72px 1fr; gap: 32px; padding: 36px 0; opacity: 0; transform: translateX(-20px); transition: opacity 0.6s, transform 0.6s; }
+    .step.visible { opacity: 1; transform: translateX(0); }
+    .step-num { width: 72px; height: 72px; border-radius: 50%; background: var(--white); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: var(--green); flex-shrink: 0; position: relative; z-index: 1; }
+    .step-content h3 { font-size: 20px; font-weight: 700; color: var(--dark-green); margin-bottom: 12px; letter-spacing: -0.5px; }
+    .step-content p { font-size: 15px; line-height: 1.75; color: var(--body-text); }
+    .step-content p + p { margin-top: 10px; }
+
+    /* See Data button */
+    .see-data-btn { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; padding: 8px 16px; border-radius: 8px; border: 1.5px solid var(--green); background: transparent; color: var(--green); font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s, color 0.2s; font-family: var(--font); }
+    .see-data-btn:hover { background: var(--green); color: var(--white); }
+
+    /* Inline viz */
+    .inline-viz { margin-top: 28px; }
+    .inline-viz + .inline-viz { margin-top: 32px; }
+    .viz-img { width: 100%; border-radius: 14px; border: 1px solid var(--light-gray); overflow: hidden; background: var(--off-white); }
+    .viz-img img { width: 100%; display: block; }
+    .viz-caption { font-size: 14px; color: var(--mid-gray); margin-top: 14px; line-height: 1.65; width: 100%; display: block; }
+
+    /* SHARED LABELS */
+    .section-label { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--green); margin-bottom: 16px; }
+    .section-label::before { content: ''; display: block; width: 20px; height: 2px; background: var(--accent); border-radius: 2px; }
+    .section-title { font-size: clamp(28px, 4vw, 42px); font-weight: 800; letter-spacing: -1.5px; color: var(--dark-green); line-height: 1.1; margin-bottom: 20px; }
+    .section-body { font-size: 16px; line-height: 1.75; color: var(--body-text); max-width: 660px; }
+
+    /* RESULTS */
+    .results-section { background: var(--dark-green); padding: 100px 48px; position: relative; overflow: hidden; }
+    .results-section::before { content: ''; position: absolute; top: -200px; right: -200px; width: 500px; height: 500px; border-radius: 50%; background: var(--green); opacity: 0.08; }
+    .results-inner { max-width: 1100px; margin: 0 auto; }
+    .results-inner .section-label { color: var(--accent); }
+    .results-inner .section-label::before { background: var(--accent); }
+    .results-inner .section-title { color: var(--white); }
+    .results-inner .section-body { color: rgba(255,255,255,0.65); }
+
+    .results-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 56px; }
+
+    /* Flip result cards */
+    .result-card { height: 130px; perspective: 600px; cursor: pointer; opacity: 0; transform: translateY(20px); transition: opacity 0.6s, transform 0.6s; }
+    .result-card.visible { opacity: 1; transform: translateY(0); }
+    .result-card-inner { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.55s; }
+    .result-card:hover .result-card-inner { transform: rotateY(180deg); }
+    .r-front, .r-back { position: absolute; inset: 0; border-radius: 16px; padding: 24px; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; }
+    .r-front { background: rgba(255,255,255,0.05); border: 1px solid rgba(116,239,170,0.2); }
+    .r-back { background: rgba(116,239,170,0.1); border: 1px solid rgba(116,239,170,0.35); transform: rotateY(180deg); }
+    .r-val { font-size: 36px; font-weight: 800; color: var(--accent); letter-spacing: -1.5px; display: flex; align-items: baseline; gap: 5px; }
+    .r-val small { font-size: 15px; font-weight: 600; }
+    .r-label { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.5); margin-top: 6px; line-height: 1.4; }
+    .r-explain { font-size: 13px; color: rgba(255,255,255,0.82); line-height: 1.55; font-weight: 400; }
+
+    /* Result plots */
+    .result-plots { margin-top: 64px; display: flex; flex-direction: column; gap: 56px; }
+    .result-plot-block { opacity: 0; transform: translateY(24px); transition: opacity 0.7s, transform 0.7s; }
+    .result-plot-block.visible { opacity: 1; transform: translateY(0); }
+    .result-plot-label { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(116,239,170,0.7); margin-bottom: 12px; }
+    .result-plot-img { width: 100%; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; }
+    .result-plot-img img { width: 100%; display: block; }
+    .result-plot-caption { font-size: 14px; color: rgba(255,255,255,0.52); margin-top: 14px; line-height: 1.65; width: 100%; display: block; }
+
+    .insight-box { margin-top: 56px; background: rgba(116,239,170,0.08); border: 1px solid rgba(116,239,170,0.25); border-radius: 16px; padding: 28px 32px; display: flex; gap: 20px; align-items: flex-start; }
+    .insight-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+    .insight-box p { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,0.75); }
+    .insight-box strong { color: var(--accent); }
+
+    /* FOOTER */
+    footer { background: var(--off-white); border-top: 1px solid var(--light-gray); padding: 48px; display: flex; align-items: center; justify-content: space-between; }
+    .footer-left { font-size: 13px; color: var(--mid-gray); line-height: 1.6; }
+    .footer-left strong { color: var(--dark-green); }
+    .footer-right { display: flex; gap: 12px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; text-decoration: none; transition: transform 0.15s, background 0.2s; font-family: var(--font); }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary { background: var(--green); color: var(--white); }
+    .btn-primary:hover { background: var(--dark-green); }
+    .btn-outline { background: var(--white); color: var(--dark-green); border: 1.5px solid var(--light-gray); }
+    .btn-outline:hover { border-color: var(--green); }
+
+    /* DATA POPUP */
+    .popup-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    .popup-overlay.open { opacity: 1; pointer-events: all; }
+    .popup-box { background: var(--white); border-radius: 20px; padding: 32px; max-width: 96vw; width: 1050px; max-height: 85vh; overflow-y: auto; overflow-x: hidden; box-shadow: 0 32px 80px rgba(0,0,0,0.15); transform: scale(0.92) translateY(16px); transition: transform 0.35s; }
+    .popup-overlay.open .popup-box { transform: scale(1) translateY(0); }
+    .popup-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .popup-header h3 { font-size: 17px; font-weight: 700; color: var(--dark-green); }
+    .popup-close { width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--light-gray); color: var(--dark-green); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-family: var(--font); }
+    .popup-close:hover { background: var(--accent); }
+    .popup-hint { font-size: 13px; color: var(--mid-gray); margin-bottom: 16px; }
+    .data-table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--light-gray); }
+    .data-table { border-collapse: collapse; font-size: 12px; white-space: nowrap; width: 100%; }
+    .data-table th { background: var(--off-white); color: var(--dark-green); font-weight: 700; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--light-gray); cursor: pointer; user-select: none; transition: background 0.2s; }
+    .data-table th:hover { background: var(--accent); }
+    .data-table td { padding: 9px 14px; color: var(--body-text); border-bottom: 1px solid var(--light-gray); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--off-white); }
+
+    /* Column tooltip */
+    .col-popup { position: fixed; z-index: 600; background: var(--dark-green); color: var(--white); border-radius: 12px; padding: 16px 20px; max-width: 280px; font-size: 13px; line-height: 1.6; font-weight: 400; box-shadow: 0 16px 40px rgba(0,0,0,0.25); pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+    .col-popup.show { opacity: 1; }
+    .col-popup strong { color: var(--accent); display: block; margin-bottom: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* CAR CONTACT CARD */
+    .contact-wrapper { position: relative; display: inline-block; }
+    .btn-contact { background: var(--green); color: var(--white); border: none; cursor: pointer; }
+    .btn-contact:hover { background: var(--dark-green); }
+
+    .car-card {
+      position: absolute; bottom: calc(100% + 14px); right: 0;
+      width: 280px;
+      background: var(--dark-green);
+      border-radius: 20px 20px 16px 16px;
+      padding: 20px 20px 16px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.28), 0 0 0 1px rgba(116,239,170,0.15);
+      opacity: 0; pointer-events: none;
+      transform: translateY(12px) scale(0.96);
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 300;
+    }
+    .car-card.open { opacity: 1; pointer-events: all; transform: translateY(0) scale(1); }
+    .car-card-roof {
+      background: linear-gradient(135deg, #1a5c3a, #0C2C1C);
+      border-radius: 12px 12px 0 0;
+      height: 10px; margin: -20px -20px 14px; border-bottom: 1px solid rgba(116,239,170,0.12);
+    }
+    .car-headlights { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .headlight {
+      width: 48px; height: 22px; border-radius: 8px;
+      background: linear-gradient(90deg, rgba(116,239,170,0.15), rgba(116,239,170,0.45));
+      border: 1px solid rgba(116,239,170,0.4);
+      box-shadow: 0 0 12px rgba(116,239,170,0.25);
+      position: relative; overflow: hidden;
+    }
+    .headlight::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 40%, rgba(116,239,170,0.3)); }
+    .headlight.right::after { background: linear-gradient(270deg, transparent 40%, rgba(116,239,170,0.3)); }
+    .car-badge { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: rgba(116,239,170,0.5); text-transform: uppercase; }
+    .car-grille { display: grid; grid-template-columns: repeat(5,1fr); gap: 3px; margin-bottom: 14px; }
+    .grille-bar { height: 5px; border-radius: 2px; background: rgba(116,239,170,0.12); border: 1px solid rgba(116,239,170,0.18); }
+    .license-plate {
+      background: #f0f0e8; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;
+      border: 2px solid #d4d0c0; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); text-align: center;
+    }
+    .plate-state { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: #666; text-transform: uppercase; margin-bottom: 2px; }
+    .plate-text { font-size: 13px; font-weight: 800; letter-spacing: 2px; color: #1a1a1a; font-family: monospace; }
+    .plate-bottom { font-size: 8px; color: #888; margin-top: 2px; letter-spacing: 0.5px; }
+    .car-contacts { display: flex; gap: 10px; justify-content: center; }
+    .contact-icon-btn {
+      display: flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 10px;
+      border: none; cursor: pointer; font-size: 12px; font-weight: 600; font-family: var(--font);
+      transition: transform 0.15s, opacity 0.2s; flex: 1; justify-content: center;
+    }
+    .contact-icon-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+    .contact-icon-btn.gmail { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.12); }
+    .contact-icon-btn.linkedin { background: rgba(10,102,194,0.25); color: #74b3f0; border: 1px solid rgba(10,102,194,0.3); }
+    .contact-icon-btn svg { flex-shrink: 0; }
+    .email-reveal {
+      margin-top: 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(116,239,170,0.2);
+      border-radius: 8px; padding: 8px 12px; text-align: center;
+      font-size: 11px; color: var(--accent); font-weight: 500; letter-spacing: 0.2px;
+      display: none;
+    }
+    .email-reveal.show { display: block; animation: fadeUp 0.25s forwards; }
+    .car-card::after {
+      content: ''; position: absolute; bottom: -8px; right: 28px;
+      width: 16px; height: 16px; background: var(--dark-green);
+      transform: rotate(45deg); border-radius: 0 0 3px 0;
+      box-shadow: 3px 3px 6px rgba(0,0,0,0.1);
+    }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 24px; }
+      .steps-inner, .results-section { padding-left: 24px; padding-right: 24px; }
+      .results-grid { grid-template-columns: repeat(2, 1fr); }
+      footer { flex-direction: column; gap: 24px; }
+      .steps-grid::before { left: 28px; }
+      .step { grid-template-columns: 56px 1fr; gap: 20px; }
+      .step-num { width: 56px; height: 56px; font-size: 16px; }
+      .hero h1 { letter-spacing: -1px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-dot"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></svg></div>
+    <span class="nav-logo-smile">make someone smile today :)</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#approach">Approach</a></li>
+    <li><a href="#results">Results</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="main.html" target="_blank" class="nav-github">Jupyter Notebook ↗</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg-circle c1"></div>
+  <div class="hero-bg-circle c2"></div>
+  <h1>Predicting <span>How Long</span><br/>Your Ride Will Take</h1>
+  <p>A LightGBM quantile regression model trained on 10 million Manhattan taxi trips, producing calibrated duration intervals instead of just a single estimate.</p>
+  <div class="hero-metrics">
+    <div class="metric-chip">
+      <div class="metric-chip-inner">
+        <div class="chip-front">
+          <div class="val">0.8 <small>min</small></div>
+          <div class="label">Mean Abs. Error</div>
+        </div>
+        <div class="chip-back"><div class="back-text">On average the model is only 48 seconds off from the actual trip duration.</div></div>
+      </div>
+    </div>
+    <div class="metric-chip">
+      <div class="metric-chip-inner">
+        <div class="chip-front">
+          <div class="val">79.8 <small>%</small></div>
+          <div class="label">Interval Coverage</div>
+        </div>
+        <div class="chip-back"><div class="back-text">79.8% of real trips fall inside the predicted interval. The theoretical target is 80%.</div></div>
+      </div>
+    </div>
+    <div class="metric-chip">
+      <div class="metric-chip-inner">
+        <div class="chip-front">
+          <div class="val">1.5 <small>min</small></div>
+          <div class="label">Interval Width</div>
+        </div>
+        <div class="chip-back"><div class="back-text">The predicted range is only 1.5 minutes wide — meaning the model is confident, not just safe.</div></div>
+      </div>
+    </div>
+    <div class="metric-chip">
+      <div class="metric-chip-inner">
+        <div class="chip-front">
+          <div class="val">10M <small>+</small></div>
+          <div class="label">Training Trips</div>
+        </div>
+        <div class="chip-back"><div class="back-text">Trained on over 10 million real Manhattan taxi trips from January to March 2025.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROAD -->
+<div class="road-wrapper">
+  <div class="road-line"></div>
+  <div class="car">
+    <svg viewBox="0 0 56 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="10" width="48" height="14" rx="4" fill="#2A9C64"/>
+      <rect x="12" y="4" width="28" height="10" rx="3" fill="#0C2C1C"/>
+      <rect x="14" y="6" width="11" height="7" rx="2" fill="#74EFAA" opacity="0.7"/>
+      <rect x="27" y="6" width="11" height="7" rx="2" fill="#74EFAA" opacity="0.7"/>
+      <circle cx="14" cy="24" r="4" fill="#0C2C1C"/>
+      <circle cx="14" cy="24" r="2" fill="#74EFAA"/>
+      <circle cx="42" cy="24" r="4" fill="#0C2C1C"/>
+      <circle cx="42" cy="24" r="2" fill="#74EFAA"/>
+      <rect x="50" y="14" width="4" height="3" rx="1" fill="#FFEB3B" opacity="0.9"/>
+    </svg>
+  </div>
+</div>
+
+<!-- STEPS -->
+<div class="steps-wrapper" id="approach">
+  <div class="steps-inner">
+    <div class="steps-header">
+      <div class="section-label">The Approach</div>
+      <h2 class="section-title">How I Built It</h2>
+      <p class="section-body" style="margin:0 auto;text-align:center;">Every decision was made to reflect what a real ETA system would need to know at the moment of pickup, before the trip begins.</p>
+    </div>
+
+    <div class="steps-grid">
+
+      <!-- 01 -->
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <h3>Data Collection &amp; Scope</h3>
+          <p>I used the NYC Taxi and Limousine Commission (TLC) Yellow Taxi trip records for January through March 2025, a publicly available dataset with over 11 million rows covering every yellow cab trip in New York City during that period.</p>
+          <p>I filtered to Manhattan pickups only, because Manhattan is by far the busiest part of New York City and yellow cabs dominate there. This made the dataset analytically coherent and meant every zone had enough trip volume for the model to learn from.</p>
+          <p>I also used a second dataset from the same TLC website — a Taxi Zone lookup table — to map the numeric location IDs in the trip records to actual neighborhood names and borough classifications.</p>
+          <button class="see-data-btn" onclick="openDataPopup()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>
+            See raw data
+          </button>
+        </div>
+      </div>
+
+      <!-- 02 -->
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <h3>Data Cleaning</h3>
+          <p>I removed rows with missing values and filtered out physically impossible records. This included trips with negative or zero fares (for example, some rows in the dataset had a fare of −$4.75, which makes no sense) as well as zero-distance trips, durations under a second or over two hours, and records outside the January to March 2025 window.</p>
+          <p>I also dropped columns that are only known after the trip ends and would therefore never be available at prediction time — things like surcharges, toll amounts, and tip amounts. Keeping these would have made the model cheat :)</p>
+        </div>
+      </div>
+
+      <!-- 03 -->
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <h3>Feature Engineering</h3>
+          <p>I calculated trip duration by subtracting the pickup timestamp from the dropoff timestamp, then calculated speed in miles per hour using that duration and the trip distance. From there, I built rolling congestion proxies: for each new trip, I looked at the last 50 and last 100 completed trips that started in the same pickup zone and computed the median speed of those past trips. This gives the model a lightweight signal about how fast traffic is moving in that area right now (without leaking any information from the current trip).</p>
+          <p>For time features, I used cyclical sine and cosine encoding. This matters because a plain numeric hour column treats 11pm and midnight as far apart, when in reality they are just one hour away from each other. Cyclical encoding wraps the scale so the model understands this. I also extracted hour of day, day of week, weekend flag, and month.</p>
+        </div>
+      </div>
+
+      <!-- 04 -->
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-content">
+          <h3>Leakage Removal</h3>
+          <p>After feature engineering, I removed the speed column and the dropoff timestamp before passing anything to the model. Leaving speed in would mean the model learns that speed times time equals distance, basic algebra, not a real pattern. And the dropoff timestamp directly encodes the answer we are trying to predict, so both had to go.</p>
+        </div>
+      </div>
+
+      <!-- 05 -->
+      <div class="step">
+        <div class="step-num">05</div>
+        <div class="step-content">
+          <h3>Exploratory Analysis</h3>
+          <p>Before training, I checked the distribution of trip durations. The raw data had a skewness of 2.49, which can also be seein in Figure 1 below as a right tail driven by rare slow or unusual trips. I log-transformed the target to bring this close to zero, so the model could treat prediction errors proportionally rather than being dominated by outliers.</p>
+          <p>I also visualized median trip duration by hour of day and day of week. The heatmap clearly shows that trips take longest during daytime working hours on weekdays, and that the early morning hours are short because there is almost no congestion. This confirmed that time features would be genuinely predictive before any model was trained.</p>
+          <div class="inline-viz">
+            <div class="viz-img"><img src="assets/images/duration_distribution.png" alt="Trip duration distribution" /></div>
+            <span class="viz-caption"><strong>Figure 1:</strong> Raw trip durations are heavily right-skewed with a skewness of 2.49, driven by a long tail of slow or unusual trips. After log-transformation the distribution becomes near-symmetric, confirming that transforming the target before training was the right decision.</span>
+          </div>
+          <div class="inline-viz">
+            <div class="viz-img"><img src="assets/images/duration_heatmap.png" alt="Duration heatmap by hour and day" /></div>
+            <span class="viz-caption"><strong>Figure 2:</strong> Median trip duration across all hours and days of the week. Daytime weekday hours are consistently the longest. The near-empty 5–7am window reflects low congestion, not missing data. Weekend nights show sustained longer durations. This directly validated that hour and day of week would be meaningful features for the model.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 06 -->
+      <div class="step">
+        <div class="step-num">06</div>
+        <div class="step-content">
+          <h3>Encoding &amp; Train-Test Split</h3>
+          <p>I split the data into 80% training and 20% test sets before doing any encoding. This order matters: the pickup and dropoff zone IDs were target-encoded by replacing each zone with its mean trip duration, but that mean was computed only on the training set. Doing it before the split would have let test-set information leak into the training process.</p>
+          <p>Low-cardinality categorical variables like vendor ID, rate code, and payment type were one-hot encoded. The result was a fully numeric feature matrix ready for model training.</p>
+        </div>
+      </div>
+
+      <!-- 07 -->
+      <div class="step">
+        <div class="step-num">07</div>
+        <div class="step-content">
+          <h3>Model: LightGBM Quantile Regression</h3>
+          <p>Rather than predicting a single trip duration, I trained three separate LightGBM models: one for the 10th percentile (optimistic estimate), one for the 50th percentile (median), and one for the 90th percentile (pessimistic estimate). Together these three outputs form a calibrated prediction interval: for any given trip, the model says "this will most likely take between X and Y minutes."</p>
+          <p>This is more useful than a single number because real ETAs need to communicate uncertainty. A model that says "14 minutes" is less informative than one that says "between 11 and 16 minutes, most likely 14." The target was log-transformed before training and inverse-transformed after prediction to convert outputs back to seconds.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="results-section" id="results">
+  <div class="results-inner">
+    <div class="section-label">Results</div>
+    <h2 class="section-title">How Well Does It Work?</h2>
+    <p class="section-body">The model produces tight, honest predictions. Hover over any card to understand what the number actually means.</p>
+
+    <div class="results-grid">
+      <div class="result-card">
+        <div class="result-card-inner">
+          <div class="r-front">
+            <div class="r-val">0.8 <small>min</small></div>
+            <div class="r-label">Mean Absolute Error</div>
+          </div>
+          <div class="r-back"><div class="r-explain">On average, the median prediction is only 48 seconds away from the actual trip duration. The most intuitive measure of everyday accuracy.</div></div>
+        </div>
+      </div>
+      <div class="result-card">
+        <div class="result-card-inner">
+          <div class="r-front">
+            <div class="r-val">2.0 <small>min</small></div>
+            <div class="r-label">Root Mean Squared Error</div>
+          </div>
+          <div class="r-back"><div class="r-explain">RMSE penalizes large errors more heavily. A value of 2 minutes means even the model's worst-case mistakes stay small.</div></div>
+        </div>
+      </div>
+      <div class="result-card">
+        <div class="result-card-inner">
+          <div class="r-front">
+            <div class="r-val">79.8 <small>%</small></div>
+            <div class="r-label">Interval Coverage</div>
+          </div>
+          <div class="r-back"><div class="r-explain">79.8% of actual trips fell within the q10–q90 predicted interval. The theoretical target is 80%. Pretty precise calibration.</div></div>
+        </div>
+      </div>
+      <div class="result-card">
+        <div class="result-card-inner">
+          <div class="r-front">
+            <div class="r-val">1.5 <small>min</small></div>
+            <div class="r-label">Median Interval Width</div>
+          </div>
+          <div class="r-back"><div class="r-explain">The predicted range is typically only 1.5 minutes wide. Achieving 80% coverage with such a narrow band means the model is confident, not just being cautious.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-plots">
+      <div class="result-plot-block">
+        <div class="result-plot-label">Feature Importance</div>
+        <div class="result-plot-img"><img src="assets/images/feature_importance.png" alt="Feature importance" /></div>
+        <span class="result-plot-caption"><strong>Figure 3:</strong> Destination zone (19.3%) and trip distance (19.1%) are the strongest predictors. It appears that where you are going and how far matters most. Pickup zone (13.9%) captures neighborhood-level congestion patterns. The rolling speed proxies (median_speed_100 and median_speed_50) each contribute around 5%, somewhat validating the congestion feature engineering. Time features (hour, cyclical encoding, and day of week) account for a meaningful combined share, confirming the exploratory analysis from step 5.</span>
+      </div>
+      <div class="result-plot-block">
+        <div class="result-plot-label">Predicted vs Actual Results For 100 Random Trips</div>
+        <div class="result-plot-img"><img src="assets/images/predicted_vs_actual.png" alt="Predicted vs actual" /></div>
+        <span class="result-plot-caption"><strong>Figure 4:</strong> 100 randomly sampled test trips sorted by actual duration from shortest to longest. The green band is the q10–q90 prediction interval. Dark dots are trips that fell inside the interval. Red crosses mark the roughly 20% of trips that fell outside. The band widens slightly for longer trips, reflecting higher uncertainty for outliers as duration grows.</span>
+      </div>
+    </div>
+
+    <div class="insight-box">
+      <div class="insight-icon">💡</div>
+      <p><strong>Limitations:</strong> this model was trained on <strong>actual measured</strong> trip distance and fare values recorded by the taximeter. In a real deployment, those values would likely be <strong>pre-trip estimates</strong> with their own margin of error or unknown completely. Real-world prediction accuracy would therefore be slightly lower than what the metrics above show.</p>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">
+    Built by <strong>Rolands Barkans</strong><br/>
+  </div>
+  <div class="footer-right">
+    <a href="https://github.com/rolandsbarkans" target="_blank" class="btn btn-outline">View on GitHub ↗</a>
+    <div class="contact-wrapper">
+      <button class="btn btn-contact" onclick="toggleCarCard(event)">Get in Touch</button>
+      <div class="car-card" id="carCard">
+        <div class="car-card-roof"></div>
+        <div class="car-headlights">
+          <div class="headlight left"></div>
+          <div class="car-badge">RB · 2026</div>
+          <div class="headlight right"></div>
+        </div>
+        <div class="car-grille">
+          <div class="grille-bar"></div><div class="grille-bar"></div><div class="grille-bar"></div><div class="grille-bar"></div><div class="grille-bar"></div>
+          <div class="grille-bar"></div><div class="grille-bar"></div><div class="grille-bar"></div><div class="grille-bar"></div><div class="grille-bar"></div>
+        </div>
+        <div class="license-plate">
+          <div class="plate-text">ROLANDS BARKANS</div>
+          <div class="plate-bottom">Minerva University</div>
+        </div>
+        <div class="car-contacts">
+          <button class="contact-icon-btn gmail" onclick="toggleEmail()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M2 7l10 7 10-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            Email
+          </button>
+          <a class="contact-icon-btn linkedin" href="https://www.linkedin.com/in/rolands-barkans-11411b247" target="_blank">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/>
+              <rect x="2" y="9" width="4" height="12"/>
+              <circle cx="4" cy="4" r="2"/>
+            </svg>
+            LinkedIn
+          </a>
+        </div>
+        <div class="email-reveal" id="emailReveal">rolands.barkans@uni.minerva.edu</div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- DATA POPUP -->
+<div class="popup-overlay" id="dataPopup" onclick="handleOverlayClick(event)">
+  <div class="popup-box">
+    <div class="popup-header">
+      <h3>Raw Data — NYC TLC Yellow Taxi (first 5 rows)</h3>
+      <button class="popup-close" onclick="closeDataPopup()">✕</button>
+    </div>
+    <p class="popup-hint">Click any column heading to learn what it means.</p>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th onclick="showCol(event,'VendorID','Which technology provider collected the trip record. 1 = Creative Mobile Technologies, 2 = Curb Mobility.')">VendorID</th>
+            <th onclick="showCol(event,'tpep_pickup_datetime','The date and time when the taxi meter was engaged — i.e. when the trip started.')">tpep_pickup_datetime</th>
+            <th onclick="showCol(event,'tpep_dropoff_datetime','The date and time when the meter was disengaged — i.e. when the trip ended. This is what the model predicts.')">tpep_dropoff_datetime</th>
+            <th onclick="showCol(event,'passenger_count','Number of passengers in the vehicle, as entered by the driver.')">passenger_count</th>
+            <th onclick="showCol(event,'trip_distance','The trip distance in miles as reported by the taximeter during the trip.')">trip_distance</th>
+            <th onclick="showCol(event,'RatecodeID','The rate code in effect. 1 = Standard, 2 = JFK flat rate, 3 = Newark, 4 = Nassau/Westchester, 5 = Negotiated, 6 = Group ride.')">RatecodeID</th>
+            <th onclick="showCol(event,'store_and_fwd_flag','Whether the trip record was held in vehicle memory before being sent to the server due to poor connectivity. Y = stored, N = sent live.')">store_and_fwd_flag</th>
+            <th onclick="showCol(event,'PULocationID','The TLC Taxi Zone ID where the meter was engaged — where the trip started. There are 265 zones across New York City.')">PULocationID</th>
+            <th onclick="showCol(event,'DOLocationID','The TLC Taxi Zone ID where the meter was disengaged — where the trip ended.')">DOLocationID</th>
+            <th onclick="showCol(event,'payment_type','How the passenger paid. 1 = Credit card, 2 = Cash, 3 = No charge, 4 = Dispute, 5 = Unknown.')">payment_type</th>
+            <th onclick="showCol(event,'fare_amount','The time-and-distance fare calculated by the taximeter. Only known at the end of the trip.')">fare_amount</th>
+            <th onclick="showCol(event,'extra','Miscellaneous extras — typically a rush hour or overnight surcharge. Only known at end of trip.')">extra</th>
+            <th onclick="showCol(event,'mta_tax','A $0.50 MTA tax automatically triggered based on the metered rate in use.')">mta_tax</th>
+            <th onclick="showCol(event,'tip_amount','Tip amount — automatically recorded for credit card payments only. Cash tips are not captured.')">tip_amount</th>
+            <th onclick="showCol(event,'tolls_amount','Total amount of all tolls paid during the trip.')">tolls_amount</th>
+            <th onclick="showCol(event,'improvement_surcharge','A $0.30 surcharge assessed on hailed trips at the flag drop.')">improvement_surcharge</th>
+            <th onclick="showCol(event,'total_amount','The total amount charged to the passenger. Does not include cash tips.')">total_amount</th>
+            <th onclick="showCol(event,'congestion_surcharge','A surcharge applied to trips starting, ending, or passing through Manhattan below 96th Street.')">congestion_surcharge</th>
+            <th onclick="showCol(event,'Airport_fee','A flat pickup fee at LaGuardia ($1.75) or JFK ($1.25) airports.')">Airport_fee</th>
+            <th onclick="showCol(event,'cbd_congestion_fee','Central Business District congestion pricing fee introduced in 2025 for trips entering or leaving lower Manhattan.')">cbd_congestion_fee</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>0</td><td>2025-01-01 00:18:38</td><td>2025-01-01 00:26:59</td><td>1.0</td><td>1.60</td><td>1.0</td><td>N</td><td>229</td><td>237</td><td>1</td><td>10.00</td><td>3.5</td><td>0.5</td><td>3.00</td><td>0.0</td><td>1.0</td><td>18.00</td><td>2.5</td><td>0.0</td><td>0.0</td></tr>
+          <tr><td>1</td><td>2025-01-01 00:32:40</td><td>2025-01-01 00:35:13</td><td>1.0</td><td>0.50</td><td>1.0</td><td>N</td><td>236</td><td>237</td><td>1</td><td>5.10</td><td>3.5</td><td>0.5</td><td>2.02</td><td>0.0</td><td>1.0</td><td>12.12</td><td>2.5</td><td>0.0</td><td>0.0</td></tr>
+          <tr><td>2</td><td>2025-01-01 00:44:04</td><td>2025-01-01 00:46:01</td><td>1.0</td><td>0.60</td><td>1.0</td><td>N</td><td>141</td><td>141</td><td>1</td><td>5.10</td><td>3.5</td><td>0.5</td><td>2.00</td><td>0.0</td><td>1.0</td><td>12.10</td><td>2.5</td><td>0.0</td><td>0.0</td></tr>
+          <tr><td>3</td><td>2025-01-01 00:14:27</td><td>2025-01-01 00:20:01</td><td>3.0</td><td>0.52</td><td>1.0</td><td>N</td><td>244</td><td>244</td><td>2</td><td>7.20</td><td>1.0</td><td>0.5</td><td>0.00</td><td>0.0</td><td>1.0</td><td>9.70</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+          <tr><td>4</td><td>2025-01-01 00:21:34</td><td>2025-01-01 00:25:06</td><td>3.0</td><td>0.66</td><td>1.0</td><td>N</td><td>244</td><td>116</td><td>2</td><td>5.80</td><td>1.0</td><td>0.5</td><td>0.00</td><td>0.0</td><td>1.0</td><td>8.30</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- COLUMN TOOLTIP -->
+<div class="col-popup" id="colPopup">
+  <strong id="colName"></strong>
+  <span id="colDesc"></span>
+</div>
+
+<script>
+  // Scroll animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.step, .result-plot-block, .result-card').forEach(el => observer.observe(el));
+
+  // Data popup
+  function openDataPopup() {
+    document.getElementById('dataPopup').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDataPopup() {
+    document.getElementById('dataPopup').classList.remove('open');
+    document.body.style.overflow = '';
+    hideCol();
+  }
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById('dataPopup')) closeDataPopup();
+  }
+
+  // Column tooltip
+  let colTimer;
+  function showCol(e, name, desc) {
+    e.stopPropagation();
+    const p = document.getElementById('colPopup');
+    document.getElementById('colName').textContent = name;
+    document.getElementById('colDesc').textContent = desc;
+    const rect = e.target.getBoundingClientRect();
+    p.style.top = (rect.bottom + 8) + 'px';
+    p.style.left = Math.min(rect.left, window.innerWidth - 300) + 'px';
+    p.classList.add('show');
+    clearTimeout(colTimer);
+    colTimer = setTimeout(hideCol, 4500);
+  }
+  function hideCol() {
+    document.getElementById('colPopup').classList.remove('show');
+  }
+  document.addEventListener('click', hideCol);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDataPopup(); closeCarCard(); } });
+
+  // Car card contact
+  function toggleCarCard(e) {
+    e.stopPropagation();
+    const card = document.getElementById('carCard');
+    card.classList.toggle('open');
+    if (!card.classList.contains('open')) {
+      document.getElementById('emailReveal').classList.remove('show');
+    }
+  }
+  function closeCarCard() {
+    document.getElementById('carCard').classList.remove('open');
+    document.getElementById('emailReveal').classList.remove('show');
+  }
+  function toggleEmail() {
+    document.getElementById('emailReveal').classList.toggle('show');
+  }
+  document.addEventListener('click', function(e) {
+    const card = document.getElementById('carCard');
+    const wrapper = card.closest('.contact-wrapper');
+    if (!wrapper.contains(e.target)) closeCarCard();
+  });
+</script>
+</body>
+</html>
